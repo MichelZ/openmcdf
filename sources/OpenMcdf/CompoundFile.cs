@@ -294,6 +294,7 @@ namespace OpenMcdf
                 this.sectors.OnVer3SizeLimitReached += new Ver3SizeLimitReached(OnSizeLimitReached);
 
             this.sectorRecycle = sectorRecycle;
+            this.eraseFreeSectors = eraseFreeSectors;
 
 
             DIFAT_SECTOR_FAT_ENTRIES_COUNT = (GetSectorSize() / 4) - 1;
@@ -337,7 +338,7 @@ namespace OpenMcdf
         /// automatically recognized from the file. Sector recycle is turned off
         /// to achieve the best reading/writing performance in most common scenarios.
         /// </remarks>
-        public CompoundFile(String fileName)
+        public CompoundFile(String fileName) : this(fileName, CFSUpdateMode.ReadOnly, CFSConfiguration.Default)
         {
             this.sectorRecycle = false;
             this.updateMode = CFSUpdateMode.ReadOnly;
@@ -1312,9 +1313,9 @@ namespace OpenMcdf
             int nextSecID
                = Sector.ENDOFCHAIN;
 
-            //var list = Enumerable.Range(0, 100).ToList();
-            //HashSet<int> processedSectors = new HashSet<int>(list);
-            //processedSectors.Clear();
+            var list = Enumerable.Range(0, 100).ToList();
+            HashSet<int> processedSectors = new HashSet<int>(list);
+            processedSectors.Clear();
 
             if (header.DIFATSectorsNumber != 0)
             {
@@ -1335,7 +1336,7 @@ namespace OpenMcdf
                 while (true && validationCount >= 0)
                 {
                     nextSecID = BitConverter.ToInt32(s.GetData(), GetSectorSize() - 4);
-                   // EnsureUniqueSectorIndex(nextSecID, processedSectors);
+                    EnsureUniqueSectorIndex(nextSecID, processedSectors);
 
                     // Strictly speaking, the following condition is not correct from
                     // a specification point of view:
@@ -1375,6 +1376,11 @@ namespace OpenMcdf
 
         private void EnsureUniqueSectorIndex(int nextSecID, HashSet<int> processedSectors)
         {
+            if (this.validationExceptionEnabled)
+            {
+                throw new Exception("validation enabled.");
+            }
+
             if (!this.validationExceptionEnabled)
             {
                 return;
@@ -1426,7 +1432,10 @@ namespace OpenMcdf
             //Is there any DIFAT sector containing other FAT entries ?
             if (difatSectors.Count > 0)
             {
-                HashSet<int> processedSectors = new HashSet<int>();
+                var list = Enumerable.Range(0, 100).ToList();
+                HashSet<int> processedSectors = new HashSet<int>(list);
+                processedSectors.Clear();
+
                 StreamView difatStream
                     = new StreamView
                         (
@@ -1450,7 +1459,7 @@ namespace OpenMcdf
                     difatStream.Read(nextDIFATSectorBuffer, 0, 4);
                     nextSecID = BitConverter.ToInt32(nextDIFATSectorBuffer, 0);
 
-                   // EnsureUniqueSectorIndex(nextSecID, processedSectors);
+                    EnsureUniqueSectorIndex(nextSecID, processedSectors);
 
                     Sector s = sectors[nextSecID] as Sector;
 
@@ -1500,7 +1509,9 @@ namespace OpenMcdf
             int nextSecID = secID;
 
             List<Sector> fatSectors = GetFatSectorChain();
-            HashSet<int> processedSectors = new HashSet<int>();
+            var list = Enumerable.Range(0, 100).ToList();
+            HashSet<int> processedSectors = new HashSet<int>(list);
+            processedSectors.Clear();
 
             StreamView fatStream
                 = new StreamView(fatSectors, GetSectorSize(), fatSectors.Count * GetSectorSize(), null, sourceStream);
@@ -1529,7 +1540,7 @@ namespace OpenMcdf
                 fatStream.Seek(nextSecID * 4, SeekOrigin.Begin);
                 int next = fatStream.ReadInt32();
 
-             //   EnsureUniqueSectorIndex(next, processedSectors);
+                EnsureUniqueSectorIndex(next, processedSectors);
                 nextSecID = next;
 
             }
@@ -1565,9 +1576,9 @@ namespace OpenMcdf
 
                 nextSecID = secID;
 
-                //var list = Enumerable.Range(0, 100).ToList();
-                //HashSet<int> processedSectors = new HashSet<int>(list);
-                //processedSectors.Clear();
+                var list = Enumerable.Range(0, 100).ToList();
+                HashSet<int> processedSectors = new HashSet<int>(list);
+                processedSectors.Clear();
 
                 while (true)
                 {
@@ -1589,7 +1600,7 @@ namespace OpenMcdf
                     int next = miniFATReader.ReadInt32();
 
                     nextSecID = next;
-                   // EnsureUniqueSectorIndex(nextSecID, processedSectors);
+                    EnsureUniqueSectorIndex(nextSecID, processedSectors);
                 }
             }
             return result;

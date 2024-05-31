@@ -9,7 +9,7 @@ namespace OpenMcdf.PerfTest
 {
     class Program
     {
-        static int MAX_STORAGE_COUNT = 500;
+        static int MAX_STORAGE_COUNT = 200;
         static int MAX_STREAM_COUNT = 50;
         static String fileName = "PerfLoad.cfs";
 
@@ -19,10 +19,18 @@ namespace OpenMcdf.PerfTest
             File.Delete(fileName);
             if (!File.Exists(fileName))
             {
-                CreateFile(fileName);
+                //CreateFile(true);
             }
 
-            Console.WriteLine($"Create took {stopWatch.Elapsed}");
+            Console.WriteLine($"Create with validation took {stopWatch.Elapsed}");
+            stopWatch.Restart();
+            File.Delete(fileName);
+            if (!File.Exists(fileName))
+            {
+               CreateFile(false);
+            }
+
+            Console.WriteLine($"Create without validation took {stopWatch.Elapsed}");
 
             CompoundFile cf = new CompoundFile(fileName);
             stopWatch.Restart();
@@ -31,9 +39,15 @@ namespace OpenMcdf.PerfTest
             Console.Read();
         }
 
-        private static void CreateFile(String fn)
+        private static void CreateFile(bool useValidation)
         {
-            CompoundFile cf = new CompoundFile();
+            var configuration = CFSConfiguration.Default;
+            if (!useValidation)
+            {
+                configuration = configuration | CFSConfiguration.NoValidationException;
+            }
+
+            CompoundFile cf = new CompoundFile(CFSVersion.Ver_3, configuration);
 
             for (int j = 0; j < MAX_STREAM_COUNT; j++)
             {
